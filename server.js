@@ -5,6 +5,19 @@ const axios = require("axios");
 const app = express();
 app.use(express.json());
 
+// Root endpoint for debugging
+app.get("/", (req, res) => {
+  res.json({ 
+    status: "ok", 
+    message: "Restaurant WhatsApp Webhook Server",
+    endpoints: {
+      health: "/health",
+      webhook: "/webhook",
+      order: "/order"
+    }
+  });
+});
+
 function formatOrder(o) {
   // Prefer structured items array (ideal case)
   const hasStructuredItems = Array.isArray(o.items) && o.items.length > 0;
@@ -42,9 +55,20 @@ app.get("/webhook", (req, res) => {
   const token = req.query["hub.verify_token"];
   const challenge = req.query["hub.challenge"];
 
+  console.log("WEBHOOK VERIFY REQUEST:", {
+    mode,
+    token,
+    challenge,
+    expected_token: process.env.WA_VERIFY_TOKEN,
+    match: token === process.env.WA_VERIFY_TOKEN
+  });
+
   if (mode === "subscribe" && token === process.env.WA_VERIFY_TOKEN) {
+    console.log("WEBHOOK VERIFIED SUCCESSFULLY");
     return res.status(200).send(challenge);
   }
+  
+  console.log("WEBHOOK VERIFY FAILED - returning 403");
   return res.sendStatus(403);
 });
 
