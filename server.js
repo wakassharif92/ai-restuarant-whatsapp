@@ -78,18 +78,18 @@ app.post("/webhook", (req, res) => {
   console.log("Body:", JSON.stringify(req.body, null, 2));
   console.log("Query:", JSON.stringify(req.query, null, 2));
   console.log("===========================");
-  
+
   // Process WhatsApp webhook events
   const body = req.body;
-  
+
   if (body.object === "whatsapp_business_account") {
     console.log("✅ WhatsApp Business Account webhook detected");
-    
+
     body.entry?.forEach((entry) => {
       entry.changes?.forEach((change) => {
         console.log("Change field:", change.field);
         console.log("Change value:", JSON.stringify(change.value, null, 2));
-        
+
         if (change.field === "messages") {
           const messages = change.value.messages;
           messages?.forEach((message) => {
@@ -98,7 +98,7 @@ app.post("/webhook", (req, res) => {
               id: message.id,
               type: message.type,
               timestamp: message.timestamp,
-              text: message.text?.body
+              text: message.text?.body,
             });
           });
         }
@@ -107,7 +107,7 @@ app.post("/webhook", (req, res) => {
   } else {
     console.log("⚠️ Unknown webhook object type:", body.object);
   }
-  
+
   res.sendStatus(200);
 });
 
