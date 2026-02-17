@@ -1,6 +1,11 @@
 const axios = require("axios");
 
-async function sendWhatsAppMessage(text, phoneNumberId, accessToken, recipientPhone) {
+async function sendWhatsAppMessage(
+  text,
+  phoneNumberId,
+  accessToken,
+  recipientPhone,
+) {
   const url = `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`;
 
   const resp = await axios.post(
@@ -16,7 +21,7 @@ async function sendWhatsAppMessage(text, phoneNumberId, accessToken, recipientPh
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
-    }
+    },
   );
 
   console.log("WA SEND RESPONSE:", JSON.stringify(resp.data, null, 2));
@@ -24,11 +29,17 @@ async function sendWhatsAppMessage(text, phoneNumberId, accessToken, recipientPh
 }
 
 module.exports = async (req, res) => {
-  console.log("=== WEBHOOK REQUEST RECEIVED ===");
-  console.log("Method:", req.method);
-  console.log("Query:", JSON.stringify(req.query, null, 2));
-  console.log("Headers:", JSON.stringify(req.headers, null, 2));
+  const logData = {
+    timestamp: new Date().toISOString(),
+    method: req.method,
+    query: req.query,
+    headers: req.headers,
+    body: req.body
+  };
   
+  console.log("=== WEBHOOK REQUEST RECEIVED ===");
+  console.log(JSON.stringify(logData, null, 2));
+
   // Handle GET request for webhook verification
   if (req.method === "GET") {
     const mode = req.query["hub.mode"];
@@ -54,8 +65,8 @@ module.exports = async (req, res) => {
 
   // Handle POST request for webhook events
   if (req.method === "POST") {
-    console.log("Body:", JSON.stringify(req.body, null, 2));
-    
+    console.log("POST Body:", JSON.stringify(req.body, null, 2));
+
     const body = req.body;
 
     if (body.object === "whatsapp_business_account") {
@@ -81,10 +92,17 @@ module.exports = async (req, res) => {
         });
       });
     } else {
-      console.log("⚠️ Unknown webhook object type:", body.object);
+      console.log("⚠️ Webhook object type:", body.object);
     }
 
-    return res.status(200).json({ success: true });
+    // Return logged data in response for debugging
+    return res.status(200).json({ 
+      success: true, 
+      received: {
+        object: body.object,
+        entryCount: body.entry?.length || 0
+      }
+    });
   }
 
   // Handle other methods

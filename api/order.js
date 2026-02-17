@@ -48,7 +48,7 @@ async function sendWhatsAppMessage(text) {
         Authorization: `Bearer ${process.env.WA_ACCESS_TOKEN}`,
         "Content-Type": "application/json",
       },
-    }
+    },
   );
 
   console.log("WA SEND RESPONSE:", JSON.stringify(resp.data, null, 2));
