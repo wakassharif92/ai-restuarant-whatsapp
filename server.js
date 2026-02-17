@@ -7,14 +7,14 @@ app.use(express.json());
 
 // Root endpoint for debugging
 app.get("/", (req, res) => {
-  res.json({ 
-    status: "ok", 
+  res.json({
+    status: "ok",
     message: "Restaurant WhatsApp Webhook Server",
     endpoints: {
       health: "/health",
       webhook: "/webhook",
-      order: "/order"
-    }
+      order: "/order",
+    },
   });
 });
 
@@ -60,20 +60,54 @@ app.get("/webhook", (req, res) => {
     token,
     challenge,
     expected_token: process.env.WA_VERIFY_TOKEN,
-    match: token === process.env.WA_VERIFY_TOKEN
+    match: token === process.env.WA_VERIFY_TOKEN,
   });
 
   if (mode === "subscribe" && token === process.env.WA_VERIFY_TOKEN) {
     console.log("WEBHOOK VERIFIED SUCCESSFULLY");
     return res.status(200).send(challenge);
   }
-  
+
   console.log("WEBHOOK VERIFY FAILED - returning 403");
   return res.sendStatus(403);
 });
 
 app.post("/webhook", (req, res) => {
-  console.log("WEBHOOK EVENT:", JSON.stringify(req.body, null, 2));
+  console.log("=== WEBHOOK POST RECEIVED ===");
+  console.log("Headers:", JSON.stringify(req.headers, null, 2));
+  console.log("Body:", JSON.stringify(req.body, null, 2));
+  console.log("Query:", JSON.stringify(req.query, null, 2));
+  console.log("===========================");
+  
+  // Process WhatsApp webhook events
+  const body = req.body;
+  
+  if (body.object === "whatsapp_business_account") {
+    console.log("✅ WhatsApp Business Account webhook detected");
+    
+    body.entry?.forEach((entry) => {
+      entry.changes?.forEach((change) => {
+        console.log("Change field:", change.field);
+        console.log("Change value:", JSON.stringify(change.value, null, 2));
+        
+        if (change.field === "messages") {
+          const messages = change.value.messages;
+          messages?.forEach((message) => {
+            console.log("📩 Incoming message:", {
+              from: message.from,
+              id: message.id,
+              type: message.type,
+              timestamp: message.timestamp,
+              text: message.text?.body
+            });
+          });
+        }
+      });
+    });
+  } else {
+    console.log("⚠️ Unknown webhook object type:", body.object);
+  }
+  
   res.sendStatus(200);
 });
 
