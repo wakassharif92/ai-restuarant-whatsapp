@@ -34,9 +34,9 @@ module.exports = async (req, res) => {
     method: req.method,
     query: req.query,
     headers: req.headers,
-    body: req.body
+    body: req.body,
   };
-  
+
   console.log("=== WEBHOOK REQUEST RECEIVED ===");
   console.log(JSON.stringify(logData, null, 2));
 
@@ -96,12 +96,12 @@ module.exports = async (req, res) => {
     }
 
     // Return logged data in response for debugging
-    return res.status(200).json({ 
-      success: true, 
+    return res.status(200).json({
+      success: true,
       received: {
         object: body.object,
-        entryCount: body.entry?.length || 0
-      }
+        entryCount: body.entry?.length || 0,
+      },
     });
   }
 
