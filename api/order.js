@@ -63,21 +63,10 @@ module.exports = async (req, res) => {
   try {
     const order = req.body || {};
 
-    const hasStructuredItems =
-      Array.isArray(order.items) && order.items.length > 0;
-    const hasFallbackItems =
-      (order.items_name && order.items_name.trim().length > 0) ||
-      (order.items_qty && order.items_qty.trim().length > 0);
-
-    if (
-      !order.name ||
-      !order.phone ||
-      (!hasStructuredItems && !hasFallbackItems)
-    ) {
+    if (!order.name || !order.phone) {
       return res.status(400).json({
         error: "Invalid order",
-        details:
-          "Required: name, phone, and items (array) OR items_name/items_qty",
+        details: "Required: name and phone",
       });
     }
 
