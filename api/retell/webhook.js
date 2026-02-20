@@ -1,15 +1,19 @@
+// api/retell/webhook.js
 const crypto = require("crypto");
+const axios = require("axios");
 
 /**
- * OPTIONAL: verify Retell webhook signature (if Retell provides it in headers).
- * If you don't know the exact header name yet, leave verification disabled
- * until you confirm Retell's signature scheme in their docs/dashboard.
+ * OPTIONAL: verify Retell webhook signature (only if you configured one).
+ * If RETELL_WEBHOOK_SECRET is not set, verification is skipped.
+ *
+ * NOTE: True signature verification usually requires the RAW request body.
+ * Vercel parses JSON by default, so treat this as a placeholder until you
+ * confirm Retell's exact signing method + header name.
  */
 function verifySignature(req) {
   const secret = process.env.RETELL_WEBHOOK_SECRET;
   if (!secret) return { ok: true, skipped: true };
 
-  // Common patterns: x-signature / x-retell-signature / x-webhook-signature
   const sig =
     req.headers["x-retell-signature"] ||
     req.headers["x-signature"] ||
@@ -17,23 +21,90 @@ function verifySignature(req) {
 
   if (!sig) return { ok: false, reason: "Missing signature header" };
 
-  // If Retell signs raw body, you MUST use raw body.
-  // Vercel typically parses JSON; this is a placeholder verification.
-  // Replace with Retell’s exact signing method once confirmed.
   const payload = JSON.stringify(req.body || {});
   const computed = crypto
     .createHmac("sha256", secret)
     .update(payload)
     .digest("hex");
 
-  const ok = crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(computed));
+  let ok = false;
+  try {
+    ok = crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(computed));
+  } catch {
+    ok = false;
+  }
 
   return { ok, skipped: false, reason: ok ? undefined : "Signature mismatch" };
 }
 
+async function sendWhatsAppMessage(text, recipientPhone) {
+  const phoneNumberId = process.env.WA_PHONE_NUMBER_ID;
+  const accessToken = process.env.WA_ACCESS_TOKEN;
+
+  if (!phoneNumberId || !accessToken) {
+    console.log("⚠️ Missing WA env vars: WA_PHONE_NUMBER_ID / WA_ACCESS_TOKEN");
+    return { ok: false, error: "Missing WhatsApp credentials" };
+  }
+
+  const url = `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`;
+
+  const resp = await axios.post(
+    url,
+    {
+      messaging_product: "whatsapp",
+      to: recipientPhone,
+      type: "text",
+      text: { body: text },
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+    },
+  );
+
+  console.log("✅ WA SEND RESPONSE:", JSON.stringify(resp.data, null, 2));
+  return { ok: true, data: resp.data };
+}
+
+function formatOrderForWhatsApp({ orderId, order }) {
+  const lines = [];
+
+  lines.push(`🧾 New Order: ${orderId}`);
+  lines.push(`Name: ${order.name || "-"}`);
+  lines.push(`Phone: ${order.phone || "-"}`);
+  lines.push(`Type: ${order.orderType || "-"}`);
+  lines.push(`Branch: ${order.branch || "-"}`);
+
+  if ((order.orderType || "").toLowerCase() === "delivery") {
+    lines.push(`Address: ${order.address || "-"}`);
+  }
+
+  if (order.payment) lines.push(`Payment: ${order.payment}`);
+
+  lines.push("");
+  lines.push("🍔 Items:");
+  (order.items || []).forEach((it, idx) => {
+    const mods =
+      Array.isArray(it.modifiers) && it.modifiers.length
+        ? ` [${it.modifiers.join(", ")}]`
+        : "";
+    const note = it.notes ? ` (Note: ${it.notes})` : "";
+    lines.push(`${idx + 1}) ${it.quantity} x ${it.name}${mods}${note}`);
+  });
+
+  if (order.specialInstructions) {
+    lines.push("");
+    lines.push(`📝 Instructions: ${order.specialInstructions}`);
+  }
+
+  return lines.join("\n");
+}
+
 /**
  * Example: Menu search stub
- * Replace this with your real menu DB/search.
+ * Replace with your real menu DB/search.
  */
 async function menuSearch(query) {
   const q = (query || "").toLowerCase();
@@ -51,30 +122,53 @@ async function menuSearch(query) {
 }
 
 /**
- * Example: Create order stub
- * Replace with your real order creation/storage.
+ * Create order + send to WhatsApp (business number)
+ * IMPORTANT: This expects order fields directly (NO wrapper object).
  */
 async function createOrder(order) {
   const orderId = `ord_${Date.now()}`;
 
-  // Minimal validation (add more later)
-  if (!order || !Array.isArray(order.items) || order.items.length === 0) {
+  // Minimal validation - only require name and phone
+  if (!order || !order.name || !order.phone) {
+    return { ok: false, error: "Order must include name and phone" };
+  }
+
+  // Enforce address for delivery
+  if ((order.orderType || "").toLowerCase() === "delivery" && !order.address) {
     return {
       ok: false,
-      error: "Order must include at least 1 item",
+      error: "Delivery address is required for delivery orders",
     };
+  }
+
+  // Send order to restaurant WhatsApp
+  const businessNumber = process.env.BUSINESS_WHATSAPP_NUMBER; // e.g. 923001234567 (no +)
+  if (!businessNumber) {
+    console.log("⚠️ BUSINESS_WHATSAPP_NUMBER missing. Skipping WhatsApp send.");
+  } else {
+    const waText = formatOrderForWhatsApp({ orderId, order });
+    try {
+      await sendWhatsAppMessage(waText, businessNumber);
+    } catch (e) {
+      console.error(
+        "❌ Failed to send WhatsApp:",
+        e?.response?.data || e.message,
+      );
+      // Don’t fail the order just because WhatsApp failed
+    }
   }
 
   return {
     ok: true,
     order_id: orderId,
-    summary: `Created order ${orderId} with ${order.items.length} item(s).`,
+    summary: `Created order ${orderId} and sent to WhatsApp (if configured).`,
     order,
   };
 }
 
 /**
- * Tool router: map Retell tool name -> your functions
+ * Tool router: map Retell tool name -> functions
+ * IMPORTANT: create_order uses toolArgs directly (no { order: ... } wrapper)
  */
 async function handleToolCall(toolName, toolArgs) {
   switch (toolName) {
@@ -84,13 +178,11 @@ async function handleToolCall(toolName, toolArgs) {
     }
 
     case "create_order": {
-      // Expect toolArgs.order to contain your order schema
-      const { order } = toolArgs || {};
-      return await createOrder(order);
+      return await createOrder(toolArgs || {});
     }
 
     default:
-      return { error: `Unknown tool: ${toolName}` };
+      return { ok: false, error: `Unknown tool: ${toolName}` };
   }
 }
 
@@ -106,7 +198,7 @@ module.exports = async (req, res) => {
   console.log("=== RETELL WEBHOOK REQUEST RECEIVED ===");
   console.log(JSON.stringify(logData, null, 2));
 
-  // Retell is typically POST-only
+  // Retell tool calls will be POST
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -126,17 +218,7 @@ module.exports = async (req, res) => {
   try {
     const body = req.body || {};
 
-    /**
-     * Retell payload shape differs by configuration.
-     * Two common patterns you’ll see:
-     * 1) event callbacks: call_started, call_ended, etc.
-     * 2) function/tool call requests (the important part for ordering)
-     *
-     * So we defensively detect tool calls in a few common locations.
-     */
-
-    // --- A) Handle tool/function calls (most important) ---
-    // Try a few likely keys; adjust once you see real Retell payload logs.
+    // Detect tool/function call (shape can vary)
     const toolCall =
       body.tool_call ||
       body.function_call ||
@@ -153,29 +235,22 @@ module.exports = async (req, res) => {
 
       console.log("✅ Tool result:", JSON.stringify(result, null, 2));
 
-      // Return in a generic tool-result response format.
-      // Retell may require a specific wrapper field name. Update once confirmed.
+      // Return tool result (Retell may require a specific key; adjust after first real payload)
       return res.status(200).json({
         ok: true,
         tool_result: result,
       });
     }
 
-    // --- B) Handle general call events ---
+    // Otherwise treat as an event callback
     const eventType =
       body.event || body.event_type || body.type || body?.data?.event_type;
 
     if (eventType) {
       console.log("📞 Retell event detected:", eventType);
-
-      // You can add event-specific handling here (analytics, logging, etc.)
-      // Example:
-      // if (eventType === "call_ended") { ... }
-
       return res.status(200).json({ ok: true });
     }
 
-    // --- C) Unknown payload ---
     console.log("⚠️ Unknown Retell webhook payload shape");
     return res.status(200).json({ ok: true, note: "Unhandled payload shape" });
   } catch (error) {
