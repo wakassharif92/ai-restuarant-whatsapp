@@ -78,10 +78,23 @@ module.exports = async (req, res) => {
       });
     }
 
-    const message = formatOrder(order);
-    await sendWhatsAppMessage(message);
+    const missing = [
+      !process.env.WA_PHONE_NUMBER_ID && "WA_PHONE_NUMBER_ID",
+      !process.env.WA_ACCESS_TOKEN && "WA_ACCESS_TOKEN",
+      !process.env.RESTAURANT_WA_TO && "RESTAURANT_WA_TO",
+    ].filter(Boolean);
 
-    return res.json({ success: true });
+    if (missing.length) {
+      return res.status(500).json({
+        error: "Missing WhatsApp environment variables",
+        missing,
+      });
+    }
+
+    const message = formatOrder(order);
+    const waResponse = await sendWhatsAppMessage(message);
+
+    return res.json({ success: true, whatsapp: waResponse });
   } catch (err) {
     console.error("STATUS:", err.response?.status);
     console.error("DATA:", JSON.stringify(err.response?.data, null, 2));
@@ -89,6 +102,7 @@ module.exports = async (req, res) => {
 
     return res.status(500).json({
       error: "WhatsApp send failed",
+      status: err.response?.status,
       meta: err.response?.data,
     });
   }
