@@ -14,6 +14,7 @@ const adminLogin = require("./api/admin/login");
 const adminUsers = require("./api/admin/users");
 const adminSession = require("./api/admin/session");
 const orderHandler = require("./api/order");
+const vapiWebhook = require("./api/vapi/webhook");
 
 app.all("/api/admin/menu", (req, res) => adminMenu(req, res));
 app.all("/api/admin/settings", (req, res) => adminSettings(req, res));
@@ -22,6 +23,7 @@ app.all("/api/admin/login", (req, res) => adminLogin(req, res));
 app.all("/api/admin/users", (req, res) => adminUsers(req, res));
 app.all("/api/admin/session", (req, res) => adminSession(req, res));
 app.post("/api/order", (req, res) => orderHandler(req, res));
+app.post("/api/vapi/webhook", (req, res) => vapiWebhook(req, res));
 
 function formatOrder(o) {
   const hasStructuredItems = Array.isArray(o.items) && o.items.length > 0;

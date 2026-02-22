@@ -1,0 +1,101 @@
+{
+  "info": {
+    "name": "Restaurant Vapi API",
+    "description": "Test Vapi webhook functions for restaurant ordering system",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Menu Search - With Query",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": {\n    \"toolCalls\": [\n      {\n        \"id\": \"test-123\",\n        \"function\": {\n          \"name\": \"menu_search\",\n          \"arguments\": {\n            \"query\": \"burger\",\n            \"restaurant_id\": \"d8630906-3a97-45ad-a5bd-3a7ff2a08ffd\"\n          }\n        }\n      }\n    ]\n  }\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/vapi/webhook",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "vapi", "webhook"]
+        }
+      }
+    },
+    {
+      "name": "Menu Search - All Items",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": {\n    \"toolCalls\": [\n      {\n        \"id\": \"test-124\",\n        \"function\": {\n          \"name\": \"menu_search\",\n          \"arguments\": {\n            \"restaurant_id\": \"d8630906-3a97-45ad-a5bd-3a7ff2a08ffd\"\n          }\n        }\n      }\n    ]\n  }\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/vapi/webhook",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "vapi", "webhook"]
+        }
+      }
+    },
+    {
+      "name": "Create Order - Delivery",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": {\n    \"toolCalls\": [\n      {\n        \"id\": \"test-125\",\n        \"function\": {\n          \"name\": \"create_order\",\n          \"arguments\": {\n            \"name\": \"John Doe\",\n            \"phone\": \"1234567890\",\n            \"orderType\": \"delivery\",\n            \"address\": \"123 Main St, Apt 4B\",\n            \"payment\": \"cash\",\n            \"restaurant_id\": \"d8630906-3a97-45ad-a5bd-3a7ff2a08ffd\",\n            \"items\": [\n              {\n                \"name\": \"Burger\",\n                \"quantity\": 2,\n                \"notes\": \"No onions\"\n              },\n              {\n                \"name\": \"Fries\",\n                \"quantity\": 1\n              }\n            ],\n            \"notes\": \"Please ring doorbell\"\n          }\n        }\n      }\n    ]\n  }\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/vapi/webhook",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "vapi", "webhook"]
+        }
+      }
+    },
+    {
+      "name": "Create Order - Pickup",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": {\n    \"toolCalls\": [\n      {\n        \"id\": \"test-126\",\n        \"function\": {\n          \"name\": \"create_order\",\n          \"arguments\": {\n            \"name\": \"Jane Smith\",\n            \"phone\": \"9876543210\",\n            \"orderType\": \"pickup\",\n            \"payment\": \"card\",\n            \"restaurant_id\": \"d8630906-3a97-45ad-a5bd-3a7ff2a08ffd\",\n            \"items\": [\n              {\n                \"name\": \"Pizza\",\n                \"quantity\": 1,\n                \"notes\": \"Extra cheese\"\n              }\n            ]\n          }\n        }\n      }\n    ]\n  }\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/vapi/webhook",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "vapi", "webhook"]
+        }
+      }
+    }
+  ]
+}

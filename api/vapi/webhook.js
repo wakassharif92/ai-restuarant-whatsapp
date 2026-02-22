@@ -11,7 +11,7 @@ const { getSupabase, getTableNames } = require("../../lib/supabase");
  * - create_order: Create and save order
  */
 
-async function menuSearch(query) {
+async function menuSearch(query, restaurantId) {
   const { ok, supabase, error } = getSupabase();
   if (!ok) return { ok: false, error };
 
@@ -22,6 +22,11 @@ async function menuSearch(query) {
     .from(menu)
     .select("name, description, price, currency")
     .eq("is_available", true);
+
+  // Filter by restaurant if provided
+  if (restaurantId) {
+    dbQuery = dbQuery.eq("restaurant_id", restaurantId);
+  }
 
   if (q) {
     dbQuery = dbQuery.ilike("name", `%${q}%`);
@@ -181,7 +186,7 @@ module.exports = async (req, res) => {
       let result;
 
       if (functionName === "menu_search") {
-        const searchResult = await menuSearch(args.query);
+        const searchResult = await menuSearch(args.query, args.restaurant_id);
         result = searchResult.ok
           ? { items: searchResult.results }
           : { error: searchResult.error };
