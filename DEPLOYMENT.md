@@ -3,16 +3,19 @@
 ## Deploy to Vercel
 
 1. Install Vercel CLI (if not already installed):
+
 ```bash
 npm install -g vercel
 ```
 
 2. Login to Vercel:
+
 ```bash
 vercel login
 ```
 
 3. Deploy:
+
 ```bash
 vercel
 ```
@@ -39,6 +42,7 @@ ADMIN_JWT_SECRET=your_jwt_secret
 3. Redeploy after adding environment variables
 
 ## URLs after deployment
+
 - Admin Panel: https://your-app.vercel.app/admin/login.html
 - Order API: https://your-app.vercel.app/api/order
 - Webhook: https://your-app.vercel.app/api/webhook
