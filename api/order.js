@@ -7,8 +7,9 @@ function formatOrder(o) {
   const itemsText = hasStructuredItems
     ? o.items
         .map((i) => {
-          const name = i?.name ?? "";
-          const qty = i?.qty ?? "";
+          const name = i?.name ?? i?.item_name ?? "";
+          // ✅ FIX: support both quantity (from Vapi) and qty (legacy)
+          const qty = i?.quantity ?? i?.qty ?? 1;
           const notes = i?.notes ? ` (${i.notes})` : "";
           return `- ${name} x${qty}${notes}`.trim();
         })
@@ -67,6 +68,16 @@ module.exports = async (req, res) => {
 
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  // ✅ OPTIONAL but strongly recommended: protect endpoint
+  // Put same token in Vercel env and Vapi Tool credential (Bearer)
+  const requiredToken = process.env.VAPI_WEBHOOK_TOKEN;
+  if (requiredToken) {
+    const auth = req.headers.authorization || "";
+    if (auth !== `Bearer ${requiredToken}`) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
   }
 
   try {
