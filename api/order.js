@@ -1,4 +1,5 @@
 const axios = require("axios");
+const { getSupabase, getTableNames } = require("../lib/supabase");
 
 function formatOrder(o) {
   const hasStructuredItems = Array.isArray(o.items) && o.items.length > 0;
@@ -91,10 +92,48 @@ module.exports = async (req, res) => {
       });
     }
 
+    const { ok, supabase, error } = getSupabase();
+    if (!ok) {
+      return res.status(500).json({ error });
+    }
+
+    const { orders } = getTableNames();
+    const orderId = order.order_id || `ord_${Date.now()}`;
+    const restaurantId =
+      order.restaurant_id || req.query.restaurant_id || req.query.restaurantId;
+
+    const orderPayload = {
+      order_id: orderId,
+      restaurant_id: restaurantId || null,
+      customer_name: order.name || null,
+      customer_phone: order.phone || null,
+      order_type: order.orderType || null,
+      address: order.address || null,
+      payment: order.payment || null,
+      notes: order.notes || order.specialInstructions || null,
+      items: order.items || null,
+      raw: order,
+      source: "api",
+      status: "new",
+    };
+
+    const { data: orderRow, error: orderError } = await supabase
+      .from(orders)
+      .insert([orderPayload])
+      .select("*")
+      .single();
+
+    if (orderError) {
+      return res.status(500).json({
+        error: "Failed to save order",
+        details: orderError.message || orderError,
+      });
+    }
+
     const message = formatOrder(order);
     const waResponse = await sendWhatsAppMessage(message);
 
-    return res.json({ success: true, whatsapp: waResponse });
+    return res.json({ success: true, order: orderRow, whatsapp: waResponse });
   } catch (err) {
     console.error("STATUS:", err.response?.status);
     console.error("DATA:", JSON.stringify(err.response?.data, null, 2));

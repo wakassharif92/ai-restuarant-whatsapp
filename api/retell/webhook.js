@@ -1,6 +1,7 @@
 // api/retell/webhook.js
 const crypto = require("crypto");
 const axios = require("axios");
+const { getSupabase, getTableNames } = require("../../lib/supabase");
 
 /**
  * OPTIONAL: verify Retell webhook signature (only if you configured one).
@@ -107,18 +108,33 @@ function formatOrderForWhatsApp({ orderId, order }) {
  * Replace with your real menu DB/search.
  */
 async function menuSearch(query) {
-  const q = (query || "").toLowerCase();
+  const { ok, supabase, error } = getSupabase();
+  if (!ok) return { ok: false, error };
 
-  const menu = [
-    { id: "zinger_burger", name: "Zinger Burger", price: 8.99 },
-    { id: "zinger_meal", name: "Zinger Meal", price: 12.49 },
-    { id: "fries", name: "Fries", price: 2.99 },
-    { id: "pepsi", name: "Pepsi", price: 1.99 },
-    { id: "7up", name: "7Up", price: 1.99 },
-  ];
+  const { menu } = getTableNames();
+  const q = (query || "").trim();
 
-  const results = menu.filter((item) => item.name.toLowerCase().includes(q));
-  return { results };
+  let dbQuery = supabase.from(menu).select("*");
+
+  if (q) {
+    dbQuery = dbQuery.ilike("name", `%${q}%`);
+  }
+
+  let { data, error: menuError } = await dbQuery.eq("available_today", true);
+
+  if (menuError) {
+    ({ data, error: menuError } = await dbQuery.eq("is_available", true));
+  }
+
+  if (menuError) {
+    ({ data, error: menuError } = await dbQuery);
+  }
+
+  if (menuError) {
+    return { ok: false, error: menuError.message || menuError };
+  }
+
+  return { ok: true, results: data || [] };
 }
 
 /**
@@ -138,6 +154,41 @@ async function createOrder(order) {
     return {
       ok: false,
       error: "Delivery address is required for delivery orders",
+    };
+  }
+
+  const { ok, supabase, error } = getSupabase();
+  if (!ok) {
+    return { ok: false, error };
+  }
+
+  const { orders } = getTableNames();
+
+  const orderPayload = {
+    order_id: orderId,
+    restaurant_id: order.restaurant_id || null,
+    customer_name: order.name || null,
+    customer_phone: order.phone || null,
+    order_type: order.orderType || null,
+    address: order.address || null,
+    payment: order.payment || null,
+    notes: order.notes || order.specialInstructions || null,
+    items: order.items || null,
+    raw: order,
+    source: "retell",
+    status: "new",
+  };
+
+  const { data: orderRow, error: orderError } = await supabase
+    .from(orders)
+    .insert([orderPayload])
+    .select("*")
+    .single();
+
+  if (orderError) {
+    return {
+      ok: false,
+      error: orderError.message || orderError,
     };
   }
 
@@ -162,7 +213,7 @@ async function createOrder(order) {
     ok: true,
     order_id: orderId,
     summary: `Created order ${orderId} and sent to WhatsApp (if configured).`,
-    order,
+    order: orderRow,
   };
 }
 
@@ -172,6 +223,7 @@ async function createOrder(order) {
  */
 async function handleToolCall(toolName, toolArgs) {
   switch (toolName) {
+    case "get_menu":
     case "menu_search": {
       const { query } = toolArgs || {};
       return await menuSearch(query);
@@ -197,6 +249,10 @@ module.exports = async (req, res) => {
 
   console.log("=== RETELL WEBHOOK REQUEST RECEIVED ===");
   console.log(JSON.stringify(logData, null, 2));
+
+  if (req.method === "GET") {
+    return res.status(200).json({ ok: true });
+  }
 
   // Retell tool calls will be POST
   if (req.method !== "POST") {
