@@ -4,8 +4,6 @@ const { getSupabase, getTableNames } = require("../../lib/supabase");
 /**
  * Vapi Tool Webhook Handler
  *
- * Handles function calls from Vapi AI assistant
- *
  * Supported tools:
  * - menu_search: Search menu items
  * - create_order: Create and save order
@@ -23,7 +21,6 @@ async function menuSearch(query, restaurantId) {
     .select("name, description, price, currency")
     .eq("is_available", true);
 
-  // Filter by restaurant if provided
   if (restaurantId) {
     dbQuery = dbQuery.eq("restaurant_id", restaurantId);
   }
@@ -44,12 +41,10 @@ async function menuSearch(query, restaurantId) {
 async function createOrder(orderData) {
   const orderId = `ord_${Date.now()}`;
 
-  // Validate required fields
   if (!orderData.name || !orderData.phone) {
     return { ok: false, error: "Name and phone are required" };
   }
 
-  // Validate delivery address
   if (orderData.orderType === "delivery" && !orderData.address) {
     return { ok: false, error: "Address required for delivery" };
   }
@@ -147,27 +142,46 @@ function formatOrderMessage(orderId, order) {
     lines.push(`📝 Notes: ${order.notes}`);
   }
 
-  return lines.join("\\n");
+  return lines.join("\n");
+}
+
+function parseToolArguments(maybeArgs) {
+  // Some platforms send arguments as a JSON string
+  if (typeof maybeArgs === "string") {
+    try {
+      return JSON.parse(maybeArgs);
+    } catch (e) {
+      return null;
+    }
+  }
+  // Otherwise assume it's already an object
+  return maybeArgs;
 }
 
 module.exports = async (req, res) => {
-  // CORS headers
+  // CORS headers (allow Authorization for Bearer tokens)
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
-
-  if (req.method !== "POST") {
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "POST")
     return res.status(405).json({ error: "Method not allowed" });
+
+  // ✅ OPTIONAL but strongly recommended: verify Vapi secret token
+  // Set VAPI_WEBHOOK_TOKEN in Vercel env, and add the same token as Bearer credential in Vapi Tool.
+  const requiredToken = process.env.VAPI_WEBHOOK_TOKEN;
+  if (requiredToken) {
+    const auth = req.headers.authorization || "";
+    const expected = `Bearer ${requiredToken}`;
+    if (auth !== expected) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
   }
 
   try {
     const { message } = req.body;
 
-    // Vapi sends function calls in message.toolCalls
     if (!message?.toolCalls || message.toolCalls.length === 0) {
       return res.status(200).json({
         results: [{ toolCallId: "none", result: "No function called" }],
@@ -178,8 +192,16 @@ module.exports = async (req, res) => {
 
     for (const toolCall of message.toolCalls) {
       const { id, function: fn } = toolCall;
-      const functionName = fn.name;
-      const args = fn.arguments;
+      const functionName = fn?.name;
+
+      const args = parseToolArguments(fn?.arguments);
+      if (!args || typeof args !== "object") {
+        results.push({
+          toolCallId: id,
+          result: JSON.stringify({ error: "Invalid tool arguments" }),
+        });
+        continue;
+      }
 
       console.log(`[Vapi] Function call: ${functionName}`, args);
 
