@@ -3,6 +3,25 @@
 -- Extensions
 create extension if not exists pgcrypto;
 
+-- RESTAURANTS
+create table if not exists public.restaurants (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  created_at timestamptz default now()
+);
+
+-- ADMIN USERS
+create table if not exists public.admin_users (
+  id uuid primary key default gen_random_uuid(),
+  username text unique not null,
+  password_hash text not null,
+  password_plain text,
+  restaurant_id uuid references public.restaurants(id) on delete set null,
+  restaurant_name text,
+  is_super boolean default false,
+  created_at timestamptz default now()
+);
+
 -- MENU ITEMS
 create table if not exists public.menu_items (
   id uuid primary key default gen_random_uuid(),
@@ -53,11 +72,14 @@ create index if not exists idx_menu_items_restaurant_id on public.menu_items (re
 create index if not exists idx_settings_restaurant_id on public.restaurant_settings (restaurant_id);
 create index if not exists idx_orders_restaurant_id on public.orders (restaurant_id);
 create index if not exists idx_orders_created_at on public.orders (created_at desc);
+create index if not exists idx_admin_users_restaurant_id on public.admin_users (restaurant_id);
 
 -- RLS
 alter table public.menu_items enable row level security;
 alter table public.restaurant_settings enable row level security;
 alter table public.orders enable row level security;
+alter table public.restaurants enable row level security;
+alter table public.admin_users enable row level security;
 
 -- Menu: read-only for anon
 create policy "menu_items_read" on public.menu_items

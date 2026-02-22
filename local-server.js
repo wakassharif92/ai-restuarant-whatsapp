@@ -1,9 +1,27 @@
 require("dotenv").config();
 const express = require("express");
 const axios = require("axios");
+const path = require("path");
 
 const app = express();
 app.use(express.json());
+app.use("/admin", express.static(path.join(__dirname, "admin")));
+
+const adminMenu = require("./api/admin/menu");
+const adminSettings = require("./api/admin/settings");
+const adminOrders = require("./api/admin/orders");
+const adminLogin = require("./api/admin/login");
+const adminUsers = require("./api/admin/users");
+const adminSession = require("./api/admin/session");
+const orderHandler = require("./api/order");
+
+app.all("/api/admin/menu", (req, res) => adminMenu(req, res));
+app.all("/api/admin/settings", (req, res) => adminSettings(req, res));
+app.all("/api/admin/orders", (req, res) => adminOrders(req, res));
+app.all("/api/admin/login", (req, res) => adminLogin(req, res));
+app.all("/api/admin/users", (req, res) => adminUsers(req, res));
+app.all("/api/admin/session", (req, res) => adminSession(req, res));
+app.post("/api/order", (req, res) => orderHandler(req, res));
 
 function formatOrder(o) {
   const hasStructuredItems = Array.isArray(o.items) && o.items.length > 0;
@@ -93,45 +111,6 @@ app.get("/api/webhook", (req, res) => {
 app.post("/api/webhook", (req, res) => {
   console.log("📨 Webhook POST received:", JSON.stringify(req.body, null, 2));
   res.status(200).json({ success: true });
-});
-
-// Order endpoint
-app.post("/api/order", async (req, res) => {
-  try {
-    console.log("📋 Order received:", JSON.stringify(req.body, null, 2));
-
-    const order = req.body || {};
-
-    const hasStructuredItems =
-      Array.isArray(order.items) && order.items.length > 0;
-    const hasFallbackItems =
-      (order.items_name && order.items_name.trim().length > 0) ||
-      (order.items_qty && order.items_qty.trim().length > 0);
-
-    if (
-      !order.name ||
-      !order.phone ||
-      (!hasStructuredItems && !hasFallbackItems)
-    ) {
-      return res.status(400).json({
-        error: "Invalid order",
-        details:
-          "Required: name, phone, and items (array) OR items_name/items_qty",
-      });
-    }
-
-    const message = formatOrder(order);
-    console.log("Sending message:", message);
-    await sendWhatsAppMessage(message);
-
-    return res.json({ success: true });
-  } catch (err) {
-    console.error("Error:", err.message);
-    return res.status(500).json({
-      error: "WhatsApp send failed",
-      message: err.message,
-    });
-  }
 });
 
 // Health check

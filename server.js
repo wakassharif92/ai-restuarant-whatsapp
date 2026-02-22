@@ -1,9 +1,25 @@
 require("dotenv").config();
 const express = require("express");
 const axios = require("axios");
+const path = require("path");
 
 const app = express();
 app.use(express.json());
+app.use("/admin", express.static(path.join(__dirname, "admin")));
+
+const adminMenu = require("./api/admin/menu");
+const adminSettings = require("./api/admin/settings");
+const adminOrders = require("./api/admin/orders");
+const adminLogin = require("./api/admin/login");
+const adminUsers = require("./api/admin/users");
+const adminSession = require("./api/admin/session");
+
+app.all("/api/admin/menu", (req, res) => adminMenu(req, res));
+app.all("/api/admin/settings", (req, res) => adminSettings(req, res));
+app.all("/api/admin/orders", (req, res) => adminOrders(req, res));
+app.all("/api/admin/login", (req, res) => adminLogin(req, res));
+app.all("/api/admin/users", (req, res) => adminUsers(req, res));
+app.all("/api/admin/session", (req, res) => adminSession(req, res));
 
 // Root endpoint for debugging
 app.get("/", (req, res) => {

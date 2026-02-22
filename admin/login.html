@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Restaurant Admin Login</title>
+    <style>
+      :root {
+        --bg: #0b1020;
+        --card: #111831;
+        --text: #e8ecf8;
+        --muted: #97a1c3;
+        --accent: #4f7cff;
+        --border: #1f2a4a;
+      }
+      * {
+        box-sizing: border-box;
+        font-family:
+          system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          sans-serif;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        display: grid;
+        place-items: center;
+        min-height: 100vh;
+      }
+      .card {
+        width: min(460px, 90vw);
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 24px;
+      }
+      h1 {
+        margin: 0 0 8px 0;
+        font-size: 22px;
+      }
+      p {
+        margin: 0 0 16px 0;
+        color: var(--muted);
+      }
+      label {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      input {
+        width: 100%;
+        margin-top: 6px;
+        margin-bottom: 12px;
+        background: #0f1630;
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 10px;
+      }
+      button {
+        width: 100%;
+        background: var(--accent);
+        color: white;
+        border: 0;
+        border-radius: 8px;
+        padding: 10px;
+        cursor: pointer;
+      }
+      .status {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Restaurant Admin Login</h1>
+      <p>Sign in with your username and password.</p>
+      <label>Username</label>
+      <input id="loginUsername" placeholder="username" />
+      <label>Password</label>
+      <input id="loginPassword" type="password" placeholder="password" />
+      <button onclick="login()">Sign In</button>
+      <div id="loginStatus" class="status"></div>
+    </div>
+
+    <script>
+      async function login() {
+        const status = document.getElementById("loginStatus");
+        status.textContent = "Signing in...";
+        try {
+          const username = document.getElementById("loginUsername").value;
+          const password = document.getElementById("loginPassword").value;
+
+          const res = await fetch("/api/admin/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, password }),
+          });
+
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            throw new Error(data.error || "Login failed");
+          }
+
+          localStorage.setItem("admin_token", data.token || "");
+          localStorage.setItem(
+            "admin_restaurant_id",
+            data.restaurant?.id || "",
+          );
+          localStorage.setItem(
+            "admin_restaurant_name",
+            data.restaurant?.name || "",
+          );
+          localStorage.setItem("admin_is_super", String(!!data.user?.is_super));
+
+          window.location.href = "/admin/index.html";
+        } catch (e) {
+          status.textContent = e.message;
+        }
+      }
+    </script>
+  </body>
+</html>

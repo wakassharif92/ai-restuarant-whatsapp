@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Restaurant Admin</title>
+    <style>
+      :root {
+        --bg: #0b1020;
+        --card: #111831;
+        --text: #e8ecf8;
+        --muted: #97a1c3;
+        --accent: #4f7cff;
+        --danger: #ff5d6c;
+        --border: #1f2a4a;
+      }
+      * {
+        box-sizing: border-box;
+        font-family:
+          system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          sans-serif;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+      }
+      header {
+        padding: 24px;
+        border-bottom: 1px solid var(--border);
+      }
+      header h1 {
+        margin: 0 0 8px 0;
+        font-size: 22px;
+      }
+      header p {
+        margin: 0;
+        color: var(--muted);
+      }
+      .container {
+        padding: 24px;
+        display: grid;
+        gap: 20px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+      }
+      .row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .row label {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      input,
+      textarea,
+      select {
+        background: #0f1630;
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 8px 10px;
+      }
+      input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+      }
+      button {
+        background: var(--accent);
+        color: white;
+        border: 0;
+        border-radius: 8px;
+        padding: 8px 12px;
+        cursor: pointer;
+      }
+      button.secondary {
+        background: #223056;
+      }
+      button.danger {
+        background: var(--danger);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 12px;
+      }
+      th,
+      td {
+        border-bottom: 1px solid var(--border);
+        padding: 8px;
+        text-align: left;
+        font-size: 13px;
+      }
+      th {
+        color: var(--muted);
+        font-weight: 600;
+      }
+      .status {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      header .title {
+        flex: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="title">
+        <h1>Restaurant Admin Panel</h1>
+        <p>Manage menu, settings, and orders.</p>
+      </div>
+      <button class="danger" onclick="logout()">Logout</button>
+    </header>
+
+    <div class="container">
+      <div class="card">
+        <h3>Settings</h3>
+        <div class="row">
+          <label>Delivery Enabled</label>
+          <input id="deliveryEnabled" type="checkbox" />
+          <label>Pickup Enabled</label>
+          <input id="pickupEnabled" type="checkbox" />
+          <label>Delivery Time</label>
+          <input id="deliveryTime" placeholder="30-40 min" />
+          <label>Payment Methods:</label>
+          <label>Cash</label>
+          <input id="paymentCash" type="checkbox" />
+          <label>Card</label>
+          <input id="paymentCard" type="checkbox" />
+          <label>Online</label>
+          <input id="paymentOnline" type="checkbox" />
+          <label>Notes Allowed</label>
+          <input id="notesAllowed" type="checkbox" />
+          <button onclick="saveSettings()">Save Settings</button>
+          <span id="settingsStatus" class="status"></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Menu Items</h3>
+        <div class="row">
+          <input id="newName" placeholder="Name" />
+          <input id="newPrice" placeholder="Price" type="number" step="0.01" />
+          <input id="newDescription" placeholder="Description" />
+          <label>Available Today</label>
+          <input id="newAvailableToday" type="checkbox" checked />
+          <label>Is Available</label>
+          <input id="newIsAvailable" type="checkbox" checked />
+          <button onclick="addMenuItem()">Add Item</button>
+          <span id="menuStatus" class="status"></span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Price</th>
+              <th>Description</th>
+              <th>Today</th>
+              <th>Available</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="menuTable"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3>Orders</h3>
+        <button class="secondary" onclick="loadOrders()">Refresh Orders</button>
+        <span id="ordersStatus" class="status"></span>
+        <table>
+          <thead>
+            <tr>
+              <th>Order ID</th>
+              <th>Name</th>
+              <th>Phone</th>
+              <th>Type</th>
+              <th>Payment</th>
+              <th>Status</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody id="ordersTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <script>
+      let authToken = localStorage.getItem("admin_token") || "";
+      let authRestaurantId = localStorage.getItem("admin_restaurant_id") || "";
+      let authRestaurantName =
+        localStorage.getItem("admin_restaurant_name") || "";
+      let isSuper = localStorage.getItem("admin_is_super") === "true";
+
+      console.log("Page loaded - authToken:", authToken ? "exists" : "missing");
+      console.log("Page loaded - authRestaurantId:", authRestaurantId);
+      console.log("Page loaded - authRestaurantName:", authRestaurantName);
+      console.log("Page loaded - isSuper:", isSuper);
+
+      const getRestaurantId = () => authRestaurantId || "";
+
+      async function api(path, options = {}) {
+        const headers = Object.assign(
+          {
+            "Content-Type": "application/json",
+            Authorization: authToken ? `Bearer ${authToken}` : "",
+          },
+          options.headers || {},
+        );
+
+        const res = await fetch(path, { ...options, headers });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data.error || data.details || "Request failed");
+        }
+        return data;
+      }
+
+      function setStatus(id, text) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = text;
+      }
+
+      function logout() {
+        localStorage.removeItem("admin_token");
+        localStorage.removeItem("admin_restaurant_id");
+        localStorage.removeItem("admin_restaurant_name");
+        localStorage.removeItem("admin_is_super");
+        window.location.href = "/admin/login.html";
+      }
+
+      async function reloadAll() {
+        console.log("reloadAll() called");
+        try {
+          await Promise.all([loadSettings(), loadMenu(), loadOrders()]);
+          console.log("reloadAll() completed successfully");
+        } catch (e) {
+          console.error("reloadAll() error:", e.message);
+        }
+      }
+
+      async function loadSettings() {
+        setStatus("settingsStatus", "Loading...");
+        const restaurantId = getRestaurantId();
+        const query =
+          isSuper && restaurantId ? `?restaurant_id=${restaurantId}` : "";
+        const data = await api(`/api/admin/settings${query}`, {
+          method: "GET",
+        });
+        const s = data.settings || {};
+        document.getElementById("deliveryEnabled").checked =
+          !!s.delivery_enabled;
+        document.getElementById("pickupEnabled").checked = !!s.pickup_enabled;
+        document.getElementById("deliveryTime").value =
+          s.delivery_time_minutes || "";
+
+        const methods = Array.isArray(s.payment_methods)
+          ? s.payment_methods
+          : [];
+        document.getElementById("paymentCash").checked =
+          methods.includes("cash");
+        document.getElementById("paymentCard").checked =
+          methods.includes("card");
+        document.getElementById("paymentOnline").checked =
+          methods.includes("online");
+
+        document.getElementById("notesAllowed").checked = !!s.notes_allowed;
+        setStatus("settingsStatus", "Loaded");
+      }
+
+      async function saveSettings() {
+        setStatus("settingsStatus", "Saving...");
+        const restaurantId = getRestaurantId();
+        const paymentMethods = [];
+        if (document.getElementById("paymentCash").checked)
+          paymentMethods.push("cash");
+        if (document.getElementById("paymentCard").checked)
+          paymentMethods.push("card");
+        if (document.getElementById("paymentOnline").checked)
+          paymentMethods.push("online");
+
+        const payload = {
+          restaurant_id: restaurantId || null,
+          delivery_enabled: document.getElementById("deliveryEnabled").checked,
+          pickup_enabled: document.getElementById("pickupEnabled").checked,
+          delivery_time_minutes: document.getElementById("deliveryTime").value,
+          payment_methods: paymentMethods,
+          notes_allowed: document.getElementById("notesAllowed").checked,
+        };
+
+        await api("/api/admin/settings", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        setStatus("settingsStatus", "Saved");
+      }
+
+      async function loadMenu() {
+        setStatus("menuStatus", "Loading...");
+        try {
+          const restaurantId = getRestaurantId();
+          console.log("loadMenu - restaurantId:", restaurantId);
+          const query =
+            isSuper && restaurantId ? `?restaurant_id=${restaurantId}` : "";
+          console.log("loadMenu - query:", query);
+          const data = await api(`/api/admin/menu${query}`, { method: "GET" });
+          console.log("loadMenu - data:", data);
+          const items = data.items || [];
+          console.log("loadMenu - items count:", items.length);
+          const tbody = document.getElementById("menuTable");
+          tbody.innerHTML = "";
+
+          items.forEach((item) => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+            <td><input data-field="name" value="${item.name || ""}" /></td>
+            <td><input data-field="price" type="number" step="0.01" value="${
+              item.price ?? ""
+            }" /></td>
+            <td><input data-field="description" value="${
+              item.description || ""
+            }" /></td>
+            <td><input data-field="available_today" type="checkbox" ${
+              item.available_today ? "checked" : ""
+            } /></td>
+            <td><input data-field="is_available" type="checkbox" ${
+              item.is_available ? "checked" : ""
+            } /></td>
+            <td>
+              <button class="secondary" data-action="save">Save</button>
+              <button class="danger" data-action="delete">Delete</button>
+            </td>
+          `;
+
+            tr.querySelector("[data-action=save]").onclick = async () => {
+              const payload = {
+                id: item.id,
+                restaurant_id: item.restaurant_id || restaurantId || null,
+                name: tr.querySelector("[data-field=name]").value,
+                price: parseFloat(
+                  tr.querySelector("[data-field=price]").value || "0",
+                ),
+                description: tr.querySelector("[data-field=description]").value,
+                available_today: tr.querySelector(
+                  "[data-field=available_today]",
+                ).checked,
+                is_available: tr.querySelector("[data-field=is_available]")
+                  .checked,
+              };
+              await api("/api/admin/menu", {
+                method: "PUT",
+                body: JSON.stringify(payload),
+              });
+              setStatus("menuStatus", "Saved");
+            };
+
+            tr.querySelector("[data-action=delete]").onclick = async () => {
+              await api("/api/admin/menu", {
+                method: "DELETE",
+                body: JSON.stringify({ id: item.id }),
+              });
+              tr.remove();
+              setStatus("menuStatus", "Deleted");
+            };
+
+            tbody.appendChild(tr);
+          });
+
+          setStatus("menuStatus", "Loaded");
+        } catch (e) {
+          setStatus("menuStatus", "Error: " + e.message);
+        }
+      }
+
+      async function addMenuItem() {
+        setStatus("menuStatus", "Adding...");
+        try {
+          const restaurantId = getRestaurantId();
+          const payload = {
+            restaurant_id: restaurantId || null,
+            name: document.getElementById("newName").value,
+            price: parseFloat(document.getElementById("newPrice").value || "0"),
+            description: document.getElementById("newDescription").value,
+            available_today:
+              document.getElementById("newAvailableToday").checked,
+            is_available: document.getElementById("newIsAvailable").checked,
+          };
+          await api("/api/admin/menu", {
+            method: "POST",
+            body: JSON.stringify(payload),
+          });
+
+          // Clear form
+          document.getElementById("newName").value = "";
+          document.getElementById("newPrice").value = "";
+          document.getElementById("newDescription").value = "";
+          document.getElementById("newAvailableToday").checked = true;
+          document.getElementById("newIsAvailable").checked = true;
+
+          await loadMenu();
+          setStatus("menuStatus", "Added");
+        } catch (e) {
+          setStatus("menuStatus", "Error: " + e.message);
+        }
+      }
+
+      async function loadOrders() {
+        setStatus("ordersStatus", "Loading...");
+        try {
+          const restaurantId = getRestaurantId();
+          const query =
+            isSuper && restaurantId ? `?restaurant_id=${restaurantId}` : "";
+          const data = await api(`/api/admin/orders${query}`, {
+            method: "GET",
+          });
+          const items = data.orders || [];
+          const tbody = document.getElementById("ordersTable");
+          tbody.innerHTML = "";
+
+          items.forEach((order) => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+            <td>${order.order_id || ""}</td>
+            <td>${order.customer_name || ""}</td>
+            <td>${order.customer_phone || ""}</td>
+            <td>${order.order_type || ""}</td>
+            <td>${order.payment || ""}</td>
+            <td>${order.status || ""}</td>
+            <td>${order.created_at ? new Date(order.created_at).toLocaleString() : ""}</td>
+          `;
+            tbody.appendChild(tr);
+          });
+
+          setStatus("ordersStatus", "Loaded");
+        } catch (e) {
+          setStatus("ordersStatus", "Error: " + e.message);
+        }
+      }
+
+      // Auto-load data on page load
+      console.log("Checking auth before loading data...");
+      if (authToken && authRestaurantId) {
+        console.log("Auth OK - calling reloadAll()");
+        reloadAll();
+      } else {
+        console.warn(
+          "Not logged in or missing restaurant_id. Redirecting to login...",
+        );
+        console.warn("authToken:", authToken ? "exists" : "missing");
+        console.warn("authRestaurantId:", authRestaurantId);
+        window.location.href = "/admin/login.html";
+      }
+    </script>
+  </body>
+</html>
