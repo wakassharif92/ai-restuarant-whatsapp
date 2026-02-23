@@ -9,25 +9,31 @@ const { getSupabase, getTableNames } = require("../../lib/supabase");
  * - create_order: Create and save order
  */
 
-async function menuSearch(query, restaurantId) {
+async function menuSearch(query) {
   const { ok, supabase, error } = getSupabase();
   if (!ok) return { ok: false, error };
 
   const { menu } = getTableNames();
-  const q = (query || "").trim();
+  const restaurantId = process.env.RESTAURANT_ID;
+
+  if (!restaurantId) {
+    return { ok: false, error: "RESTAURANT_ID is not configured" };
+  }
+
+  const q = (query || "").trim().toLowerCase();
 
   let dbQuery = supabase
     .from(menu)
-    .select("name, description, price, currency")
+    .select("id, name, description, price, currency")
+    .eq("restaurant_id", restaurantId)
     .eq("is_available", true);
-
-  if (restaurantId) {
-    dbQuery = dbQuery.eq("restaurant_id", restaurantId);
-  }
 
   if (q) {
     dbQuery = dbQuery.ilike("name", `%${q}%`);
   }
+
+  // Limit results to prevent AI confusion
+  dbQuery = dbQuery.limit(5);
 
   const { data, error: menuError } = await dbQuery;
 
@@ -35,7 +41,11 @@ async function menuSearch(query, restaurantId) {
     return { ok: false, error: menuError.message || menuError };
   }
 
-  return { ok: true, results: data || [] };
+  return {
+    ok: true,
+    topMatch: data?.[0] || null,
+    items: data || [],
+  };
 }
 
 async function createOrder(orderData) {
