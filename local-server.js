@@ -7,6 +7,7 @@ const app = express();
 app.use(express.json());
 app.use("/admin", express.static(path.join(__dirname, "admin")));
 
+// Restaurant admin endpoints
 const adminMenu = require("./api/admin/menu");
 const adminSettings = require("./api/admin/settings");
 const adminOrders = require("./api/admin/orders");
@@ -16,6 +17,15 @@ const adminSession = require("./api/admin/session");
 const orderHandler = require("./api/order");
 const vapiWebhook = require("./api/vapi/webhook");
 
+// Clinic endpoints
+const clinicLogin = require("./api/clinic/login");
+const clinicAppointments = require("./api/clinic/appointments");
+const clinicServices = require("./api/clinic/services");
+const clinicBlockedTimes = require("./api/clinic/blocked-times");
+const clinicSettings = require("./api/clinic/settings");
+const clinicVapiWebhook = require("./api/clinic/vapi-webhook");
+
+// Restaurant routes
 app.all("/api/admin/menu", (req, res) => adminMenu(req, res));
 app.all("/api/admin/settings", (req, res) => adminSettings(req, res));
 app.all("/api/admin/orders", (req, res) => adminOrders(req, res));
@@ -24,6 +34,16 @@ app.all("/api/admin/users", (req, res) => adminUsers(req, res));
 app.all("/api/admin/session", (req, res) => adminSession(req, res));
 app.post("/api/order", (req, res) => orderHandler(req, res));
 app.post("/api/vapi/webhook", (req, res) => vapiWebhook(req, res));
+
+// Clinic routes
+app.post("/api/clinic/login", (req, res) => clinicLogin(req, res));
+app.all("/api/clinic/appointments", (req, res) => clinicAppointments(req, res));
+app.all("/api/clinic/services", (req, res) => clinicServices(req, res));
+app.all("/api/clinic/blocked-times", (req, res) =>
+  clinicBlockedTimes(req, res),
+);
+app.all("/api/clinic/settings", (req, res) => clinicSettings(req, res));
+app.all("/api/clinic/vapi-webhook", (req, res) => clinicVapiWebhook(req, res));
 
 function formatOrder(o) {
   const hasStructuredItems = Array.isArray(o.items) && o.items.length > 0;

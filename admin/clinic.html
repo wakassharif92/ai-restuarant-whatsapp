@@ -1,0 +1,1084 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Clinic Management</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+      }
+
+      .login-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        height: 100vh;
+      }
+
+      .login-card {
+        background: white;
+        padding: 40px;
+        border-radius: 10px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        width: 100%;
+        max-width: 400px;
+      }
+
+      .login-card h1 {
+        text-align: center;
+        margin-bottom: 30px;
+        color: #667eea;
+        font-size: 28px;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        color: #333;
+        font-weight: 500;
+      }
+
+      .form-group input {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 14px;
+        transition: border-color 0.3s;
+      }
+
+      .form-group input:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      }
+
+      .login-btn {
+        width: 100%;
+        padding: 12px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 5px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s;
+      }
+
+      .login-btn:hover {
+        transform: translateY(-2px);
+      }
+
+      .login-btn:active {
+        transform: translateY(0);
+      }
+
+      .error-message {
+        background: #fee;
+        color: #c33;
+        padding: 12px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+        text-align: center;
+        display: none;
+      }
+
+      .error-message.show {
+        display: block;
+      }
+
+      /* Admin Dashboard */
+      .admin-container {
+        display: none;
+        width: 100%;
+        height: 100vh;
+        flex-direction: column;
+        background: #f5f5f5;
+      }
+
+      .admin-container.show {
+        display: flex;
+      }
+
+      .header {
+        background: white;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .header h1 {
+        color: #667eea;
+        font-size: 24px;
+      }
+
+      .logout-btn {
+        padding: 10px 20px;
+        background: #f44336;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background 0.3s;
+      }
+
+      .logout-btn:hover {
+        background: #d32f2f;
+      }
+
+      .main-content {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+      }
+
+      .sidebar {
+        width: 250px;
+        background: white;
+        border-right: 1px solid #ddd;
+        padding: 20px 0;
+        overflow-y: auto;
+      }
+
+      .nav-item {
+        padding: 15px 20px;
+        cursor: pointer;
+        transition:
+          background 0.3s,
+          color 0.3s;
+        border-left: 4px solid transparent;
+        color: #666;
+      }
+
+      .nav-item:hover {
+        background: #f5f5f5;
+        color: #667eea;
+      }
+
+      .nav-item.active {
+        background: #f0f0f0;
+        color: #667eea;
+        border-left-color: #667eea;
+      }
+
+      .content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 30px;
+      }
+
+      .section {
+        display: none;
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .section.active {
+        display: block;
+      }
+
+      .section h2 {
+        color: #667eea;
+        margin-bottom: 20px;
+        font-size: 22px;
+      }
+
+      .table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+      }
+
+      .table th {
+        background: #f5f5f5;
+        padding: 12px;
+        text-align: left;
+        border-bottom: 2px solid #ddd;
+        color: #666;
+        font-weight: 600;
+      }
+
+      .table td {
+        padding: 12px;
+        border-bottom: 1px solid #eee;
+      }
+
+      .table tr:hover {
+        background: #f9f9f9;
+      }
+
+      .btn {
+        padding: 10px 15px;
+        background: #667eea;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.3s;
+      }
+
+      .btn:hover {
+        background: #764ba2;
+      }
+
+      .btn.danger {
+        background: #f44336;
+      }
+
+      .btn.danger:hover {
+        background: #d32f2f;
+      }
+
+      .form-section {
+        background: #f9f9f9;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+      }
+
+      .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+
+      .form-row.full {
+        grid-template-columns: 1fr;
+      }
+
+      .checkbox-group {
+        display: flex;
+        gap: 20px;
+        margin-top: 10px;
+      }
+
+      .checkbox-group label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        font-weight: 400;
+      }
+
+      .checkbox-group input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+      }
+
+      .status-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .status-badge.booked {
+        background: #e3f2fd;
+        color: #1976d2;
+      }
+
+      .status-badge.completed {
+        background: #e8f5e9;
+        color: #388e3c;
+      }
+
+      .status-badge.cancelled {
+        background: #ffebee;
+        color: #c62828;
+      }
+
+      .status-badge.no_show {
+        background: #fff3e0;
+        color: #e65100;
+      }
+
+      .calendar {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 10px;
+        margin-top: 20px;
+      }
+
+      .calendar-day {
+        aspect-ratio: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        cursor: pointer;
+        background: white;
+        transition: all 0.3s;
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      .calendar-day:hover {
+        background: #f0f0f0;
+      }
+
+      .calendar-day.today {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+      }
+
+      .calendar-day.selected {
+        background: #764ba2;
+        color: white;
+        border-color: #764ba2;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: #999;
+      }
+
+      .empty-state-icon {
+        font-size: 48px;
+        margin-bottom: 20px;
+      }
+
+      .loading {
+        text-align: center;
+        padding: 20px;
+        color: #999;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Login Screen -->
+    <div class="login-container" id="loginContainer">
+      <div class="login-card">
+        <h1>🏥 Clinic Login</h1>
+        <div class="error-message" id="loginError"></div>
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="username">Username</label>
+            <input
+              type="text"
+              id="username"
+              placeholder="clinic_admin"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input
+              type="password"
+              id="password"
+              placeholder="••••••••"
+              required
+            />
+          </div>
+          <button type="submit" class="login-btn">Login</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Admin Dashboard -->
+    <div class="admin-container" id="adminContainer">
+      <!-- Header -->
+      <div class="header">
+        <h1>🏥 Clinic Management</h1>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+      </div>
+
+      <!-- Main Content -->
+      <div class="main-content">
+        <!-- Sidebar -->
+        <div class="sidebar">
+          <div class="nav-item active" onclick="switchSection('appointments')">
+            📅 Appointments
+          </div>
+          <div class="nav-item" onclick="switchSection('services')">
+            💉 Services
+          </div>
+          <div class="nav-item" onclick="switchSection('blocked-times')">
+            🚫 Blocked Times
+          </div>
+          <div class="nav-item" onclick="switchSection('settings')">
+            ⚙️ Settings
+          </div>
+        </div>
+
+        <!-- Content Area -->
+        <div class="content">
+          <!-- Appointments Section -->
+          <div class="section active" id="appointmentsSection">
+            <h2>📅 Appointments</h2>
+            <div class="form-section">
+              <div class="form-row">
+                <div>
+                  <label>Filter by Status</label>
+                  <select
+                    id="statusFilter"
+                    onchange="loadAppointments()"
+                    style="width: 100%; padding: 8px"
+                  >
+                    <option value="">All</option>
+                    <option value="booked">Booked</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                    <option value="no_show">No Show</option>
+                  </select>
+                </div>
+                <div>
+                  <label>&nbsp;</label>
+                  <button
+                    class="btn"
+                    onclick="loadAppointments()"
+                    style="width: 100%"
+                  >
+                    Refresh
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div id="appointmentsLoading" class="loading" style="display: none">
+              Loading...
+            </div>
+            <table class="table" id="appointmentsTable" style="display: none">
+              <thead>
+                <tr>
+                  <th>Patient</th>
+                  <th>Phone</th>
+                  <th>Service</th>
+                  <th>Date/Time</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="appointmentsBody"></tbody>
+            </table>
+            <div
+              class="empty-state"
+              id="appointmentsEmpty"
+              style="display: none"
+            >
+              <div class="empty-state-icon">📭</div>
+              <p>No appointments found</p>
+            </div>
+          </div>
+
+          <!-- Services Section -->
+          <div class="section" id="servicesSection">
+            <h2>💉 Services</h2>
+            <div class="form-section">
+              <div class="form-row">
+                <input
+                  type="text"
+                  id="serviceName"
+                  placeholder="Service name (e.g., Root Canal)"
+                />
+                <input
+                  type="number"
+                  id="serviceDuration"
+                  placeholder="Duration (minutes)"
+                  min="1"
+                />
+              </div>
+              <div class="form-row">
+                <input
+                  type="number"
+                  id="servicePrice"
+                  placeholder="Price"
+                  min="0"
+                  step="0.01"
+                />
+                <button class="btn" onclick="addService()" style="width: 100%">
+                  Add Service
+                </button>
+              </div>
+            </div>
+            <div id="servicesLoading" class="loading" style="display: none">
+              Loading...
+            </div>
+            <table class="table" id="servicesTable" style="display: none">
+              <thead>
+                <tr>
+                  <th>Service</th>
+                  <th>Duration</th>
+                  <th>Price</th>
+                  <th>Active</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="servicesBody"></tbody>
+            </table>
+            <div class="empty-state" id="servicesEmpty" style="display: none">
+              <div class="empty-state-icon">🏥</div>
+              <p>No services yet</p>
+            </div>
+          </div>
+
+          <!-- Blocked Times Section -->
+          <div class="section" id="blockedTimesSection">
+            <h2>🚫 Blocked Times</h2>
+            <div class="form-section">
+              <div class="form-row">
+                <div>
+                  <label>Start Date/Time</label>
+                  <input type="datetime-local" id="blockedStart" />
+                </div>
+                <div>
+                  <label>End Date/Time</label>
+                  <input type="datetime-local" id="blockedEnd" />
+                </div>
+              </div>
+              <div class="form-row">
+                <input
+                  type="text"
+                  id="blockedReason"
+                  placeholder="Reason (e.g., Lunch Break)"
+                />
+                <button
+                  class="btn"
+                  onclick="addBlockedTime()"
+                  style="width: 100%"
+                >
+                  Add Blocked Time
+                </button>
+              </div>
+            </div>
+            <div id="blockedLoading" class="loading" style="display: none">
+              Loading...
+            </div>
+            <table class="table" id="blockedTable" style="display: none">
+              <thead>
+                <tr>
+                  <th>Start</th>
+                  <th>End</th>
+                  <th>Reason</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="blockedBody"></tbody>
+            </table>
+            <div class="empty-state" id="blockedEmpty" style="display: none">
+              <div class="empty-state-icon">✅</div>
+              <p>No blocked times</p>
+            </div>
+          </div>
+
+          <!-- Settings Section -->
+          <div class="section" id="settingsSection">
+            <h2>⚙️ Clinic Settings</h2>
+            <div class="form-section">
+              <div class="form-group">
+                <label>Timezone</label>
+                <input
+                  type="text"
+                  id="settingTimezone"
+                  placeholder="Asia/Karachi"
+                />
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Slot Step (minutes)</label>
+                  <input
+                    type="number"
+                    id="settingSlotStep"
+                    min="5"
+                    step="5"
+                    value="15"
+                  />
+                </div>
+                <div class="form-group">
+                  <label>Buffer Time (minutes)</label>
+                  <input
+                    type="number"
+                    id="settingBuffer"
+                    min="0"
+                    step="5"
+                    value="0"
+                  />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Working Hours (JSON format)</label>
+                <textarea
+                  id="settingWorkingHours"
+                  style="
+                    width: 100%;
+                    padding: 10px;
+                    border: 1px solid #ddd;
+                    border-radius: 5px;
+                    font-family: monospace;
+                    height: 200px;
+                  "
+                >
+{"mon": "09:00-17:00", "tue": "09:00-17:00", "wed": "09:00-17:00", "thu": "09:00-17:00", "fri": "10:00-16:00", "sat": "09:00-13:00", "sun": "closed"}</textarea
+                >
+              </div>
+
+              <button
+                class="btn"
+                onclick="saveSettings()"
+                style="width: 100%; margin-top: 20px"
+              >
+                Save Settings
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const API_BASE = "http://localhost:3000"; // Change to your Vercel URL in production
+
+      // ========================================
+      // LOGIN
+      // ========================================
+      document
+        .getElementById("loginForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+
+          const username = document.getElementById("username").value;
+          const password = document.getElementById("password").value;
+
+          try {
+            const res = await fetch(`${API_BASE}/api/clinic/login`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ username, password }),
+            });
+
+            const data = await res.json();
+
+            if (!data.ok) {
+              throw new Error(data.error || "Login failed");
+            }
+
+            // Store token and admin info
+            localStorage.setItem("clinic_token", data.token);
+            localStorage.setItem("clinic_admin_id", data.admin_id);
+            localStorage.setItem("clinic_admin_username", data.username);
+
+            // Show admin panel
+            showAdminPanel();
+            loadAllData();
+          } catch (err) {
+            const errorEl = document.getElementById("loginError");
+            errorEl.textContent = err.message;
+            errorEl.classList.add("show");
+          }
+        });
+
+      // ========================================
+      // NAVIGATION
+      // ========================================
+      function switchSection(sectionId) {
+        // Hide all sections
+        document
+          .querySelectorAll(".section")
+          .forEach((s) => s.classList.remove("active"));
+        document
+          .querySelectorAll(".nav-item")
+          .forEach((n) => n.classList.remove("active"));
+
+        // Show selected section
+        const sectionMap = {
+          appointments: "appointmentsSection",
+          services: "servicesSection",
+          "blocked-times": "blockedTimesSection",
+          settings: "settingsSection",
+        };
+
+        document.getElementById(sectionMap[sectionId]).classList.add("active");
+        event.target.classList.add("active");
+
+        // Load data for section
+        if (sectionId === "appointments") loadAppointments();
+        else if (sectionId === "services") loadServices();
+        else if (sectionId === "blocked-times") loadBlockedTimes();
+        else if (sectionId === "settings") loadSettings();
+      }
+
+      // ========================================
+      // APPOINTMENTS
+      // ========================================
+      async function loadAppointments() {
+        const status = document.getElementById("statusFilter").value;
+        const loading = document.getElementById("appointmentsLoading");
+        const table = document.getElementById("appointmentsTable");
+        const tbody = document.getElementById("appointmentsBody");
+        const empty = document.getElementById("appointmentsEmpty");
+
+        loading.style.display = "block";
+        table.style.display = "none";
+        empty.style.display = "none";
+
+        try {
+          let url = `${API_BASE}/api/clinic/appointments`;
+          if (status) url += `?status=${status}`;
+
+          const res = await fetch(url);
+          const data = await res.json();
+
+          if (
+            !data.ok ||
+            !data.appointments ||
+            data.appointments.length === 0
+          ) {
+            empty.style.display = "block";
+            loading.style.display = "none";
+            return;
+          }
+
+          tbody.innerHTML = data.appointments
+            .map((apt) => {
+              const startDate = new Date(apt.start_at);
+              return `
+          <tr>
+            <td>${apt.patient_name}</td>
+            <td>${apt.patient_phone}</td>
+            <td>${apt.service_id}</td>
+            <td>${startDate.toLocaleString()}</td>
+            <td><span class="status-badge ${apt.status}">${apt.status}</span></td>
+            <td>
+              ${apt.status === "booked" ? `<button class="btn" onclick="completeAppointment('${apt.id}')">Complete</button>` : ""}
+              ${apt.status !== "cancelled" ? `<button class="btn danger" onclick="cancelAppointment('${apt.id}')">Cancel</button>` : ""}
+            </td>
+          </tr>
+        `;
+            })
+            .join("");
+
+          table.style.display = "table";
+        } catch (err) {
+          alert("Error loading appointments: " + err.message);
+        } finally {
+          loading.style.display = "none";
+        }
+      }
+
+      async function completeAppointment(id) {
+        if (!confirm("Mark as completed?")) return;
+
+        try {
+          const res = await fetch(`${API_BASE}/api/clinic/appointments`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id, status: "completed" }),
+          });
+
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.error);
+
+          loadAppointments();
+        } catch (err) {
+          alert("Error: " + err.message);
+        }
+      }
+
+      async function cancelAppointment(id) {
+        if (!confirm("Cancel appointment?")) return;
+
+        try {
+          const res = await fetch(`${API_BASE}/api/clinic/appointments`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id, status: "cancelled" }),
+          });
+
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.error);
+
+          loadAppointments();
+        } catch (err) {
+          alert("Error: " + err.message);
+        }
+      }
+
+      // ========================================
+      // SERVICES
+      // ========================================
+      async function loadServices() {
+        const loading = document.getElementById("servicesLoading");
+        const table = document.getElementById("servicesTable");
+        const tbody = document.getElementById("servicesBody");
+        const empty = document.getElementById("servicesEmpty");
+
+        loading.style.display = "block";
+
+        try {
+          const res = await fetch(`${API_BASE}/api/clinic/services`);
+          const data = await res.json();
+
+          if (!data.ok || !data.services || data.services.length === 0) {
+            empty.style.display = "block";
+            table.style.display = "none";
+            loading.style.display = "none";
+            return;
+          }
+
+          tbody.innerHTML = data.services
+            .map(
+              (svc) => `
+          <tr>
+            <td>${svc.name}</td>
+            <td>${svc.duration_minutes} min</td>
+            <td>${svc.price} ${svc.currency}</td>
+            <td>${svc.is_active ? "✅" : "❌"}</td>
+            <td>
+              <button class="btn" onclick="editService('${svc.id}')">Edit</button>
+            </td>
+          </tr>
+        `,
+            )
+            .join("");
+
+          table.style.display = "table";
+        } catch (err) {
+          alert("Error loading services: " + err.message);
+        } finally {
+          loading.style.display = "none";
+        }
+      }
+
+      async function addService() {
+        const name = document.getElementById("serviceName").value;
+        const duration = document.getElementById("serviceDuration").value;
+        const price = document.getElementById("servicePrice").value;
+
+        if (!name || !duration || !price) {
+          alert("Please fill in all fields");
+          return;
+        }
+
+        try {
+          const res = await fetch(`${API_BASE}/api/clinic/services`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name,
+              duration_minutes: parseInt(duration),
+              price: parseFloat(price),
+              currency: "PKR",
+              is_active: true,
+            }),
+          });
+
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.error);
+
+          document.getElementById("serviceName").value = "";
+          document.getElementById("serviceDuration").value = "";
+          document.getElementById("servicePrice").value = "";
+
+          loadServices();
+        } catch (err) {
+          alert("Error: " + err.message);
+        }
+      }
+
+      // ========================================
+      // BLOCKED TIMES
+      // ========================================
+      async function loadBlockedTimes() {
+        const loading = document.getElementById("blockedLoading");
+        const table = document.getElementById("blockedTable");
+        const tbody = document.getElementById("blockedBody");
+        const empty = document.getElementById("blockedEmpty");
+
+        loading.style.display = "block";
+
+        try {
+          const res = await fetch(`${API_BASE}/api/clinic/blocked-times`);
+          const data = await res.json();
+
+          if (
+            !data.ok ||
+            !data.blocked_times ||
+            data.blocked_times.length === 0
+          ) {
+            empty.style.display = "block";
+            table.style.display = "none";
+            loading.style.display = "none";
+            return;
+          }
+
+          tbody.innerHTML = data.blocked_times
+            .map((bt) => {
+              const start = new Date(bt.start_at);
+              const end = new Date(bt.end_at);
+              return `
+          <tr>
+            <td>${start.toLocaleString()}</td>
+            <td>${end.toLocaleString()}</td>
+            <td>${bt.reason || "-"}</td>
+            <td>
+              <button class="btn danger" onclick="deleteBlockedTime('${bt.id}')">Delete</button>
+            </td>
+          </tr>
+        `;
+            })
+            .join("");
+
+          table.style.display = "table";
+        } catch (err) {
+          alert("Error loading blocked times: " + err.message);
+        } finally {
+          loading.style.display = "none";
+        }
+      }
+
+      async function addBlockedTime() {
+        const start = document.getElementById("blockedStart").value;
+        const end = document.getElementById("blockedEnd").value;
+        const reason = document.getElementById("blockedReason").value;
+
+        if (!start || !end) {
+          alert("Please fill in start and end times");
+          return;
+        }
+
+        try {
+          const res = await fetch(`${API_BASE}/api/clinic/blocked-times`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              start_at: new Date(start).toISOString(),
+              end_at: new Date(end).toISOString(),
+              reason: reason || null,
+            }),
+          });
+
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.error);
+
+          document.getElementById("blockedStart").value = "";
+          document.getElementById("blockedEnd").value = "";
+          document.getElementById("blockedReason").value = "";
+
+          loadBlockedTimes();
+        } catch (err) {
+          alert("Error: " + err.message);
+        }
+      }
+
+      // ========================================
+      // SETTINGS
+      // ========================================
+      async function loadSettings() {
+        try {
+          const res = await fetch(`${API_BASE}/api/clinic/settings`);
+          const data = await res.json();
+
+          if (data.ok && data.settings) {
+            const s = data.settings;
+            document.getElementById("settingTimezone").value =
+              s.timezone || "Asia/Karachi";
+            document.getElementById("settingSlotStep").value =
+              s.slot_step_minutes || 15;
+            document.getElementById("settingBuffer").value =
+              s.buffer_minutes || 0;
+            document.getElementById("settingWorkingHours").value =
+              JSON.stringify(s.working_hours || {}, null, 2);
+          }
+        } catch (err) {
+          alert("Error loading settings: " + err.message);
+        }
+      }
+
+      async function saveSettings() {
+        try {
+          const timezone = document.getElementById("settingTimezone").value;
+          const slotStep = parseInt(
+            document.getElementById("settingSlotStep").value,
+          );
+          const buffer = parseInt(
+            document.getElementById("settingBuffer").value,
+          );
+          const workingHours = JSON.parse(
+            document.getElementById("settingWorkingHours").value,
+          );
+
+          const res = await fetch(`${API_BASE}/api/clinic/settings`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              timezone,
+              slot_step_minutes: slotStep,
+              buffer_minutes: buffer,
+              working_hours: workingHours,
+            }),
+          });
+
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.error);
+
+          alert("Settings saved successfully!");
+        } catch (err) {
+          alert("Error: " + err.message);
+        }
+      }
+
+      // ========================================
+      // UTILITY
+      // ========================================
+      function showAdminPanel() {
+        document.getElementById("loginContainer").style.display = "none";
+        document.getElementById("adminContainer").classList.add("show");
+      }
+
+      function loadAllData() {
+        loadAppointments();
+        loadServices();
+        loadBlockedTimes();
+        loadSettings();
+      }
+
+      function logout() {
+        localStorage.removeItem("clinic_token");
+        localStorage.removeItem("clinic_admin_id");
+        localStorage.removeItem("clinic_admin_username");
+
+        document.getElementById("loginContainer").style.display = "flex";
+        document.getElementById("adminContainer").classList.remove("show");
+        document.getElementById("loginForm").reset();
+        document.getElementById("loginError").classList.remove("show");
+      }
+
+      // Check if already logged in
+      window.addEventListener("load", () => {
+        const token = localStorage.getItem("clinic_token");
+        if (token) {
+          showAdminPanel();
+          loadAllData();
+        }
+      });
+    </script>
+  </body>
+</html>
