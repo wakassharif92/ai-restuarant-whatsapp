@@ -198,7 +198,7 @@ module.exports = async (req, res) => {
       if (!args || typeof args !== "object") {
         results.push({
           toolCallId: id,
-          result,
+          result: JSON.stringify({ error: "Invalid tool arguments" }),
         });
         continue;
       }
