@@ -460,22 +460,99 @@ async function handleClinicVapiWebhook(req, res) {
 
       if (functionName === "check_availability") {
         const { date, service_id } = args;
-        const { data: svc } = await supabase
-          .from(services)
-          .select("duration_minutes")
+
+        // Get service duration
+        const { data: svc, error: svcError } = await supabase
+          .from("services")
+          .select("duration_minutes, name")
           .eq("id", service_id)
           .single();
 
-        const duration = svc?.duration_minutes || 30;
-        const startTime = new Date(`${date}T09:00:00Z`);
-        const slots = [];
+        if (svcError || !svc) {
+          result = { ok: false, error: "Service not found" };
+        } else {
+          // Get clinic settings
+          const { data: settings } = await supabase
+            .from("clinic_settings")
+            .select("working_hours, slot_step_minutes, buffer_minutes")
+            .limit(1)
+            .single();
 
-        for (let i = 0; i < 8; i++) {
-          const slotStart = new Date(startTime.getTime() + i * 60 * 60 * 1000);
-          slots.push(slotStart.toISOString());
+          const dayName = new Date(`${date}T00:00:00Z`)
+            .toLocaleDateString("en-US", { weekday: "short" })
+            .toLowerCase();
+          const hours = settings?.working_hours?.[dayName] || "closed";
+          const slotStep = settings?.slot_step_minutes || 15;
+          const buffer = settings?.buffer_minutes || 0;
+          const duration = svc.duration_minutes;
+
+          if (hours === "closed") {
+            result = {
+              ok: true,
+              available_slots: [],
+              slot_count: 0,
+              message: "Clinic closed on this day",
+            };
+          } else {
+            // Parse working hours "09:00-17:00"
+            const [start, end] = hours.split("-");
+            const [startH, startM] = start.split(":").map(Number);
+            const [endH, endM] = end.split(":").map(Number);
+
+            // Get booked + blocked times for this date
+            const dateStart = `${date}T00:00:00Z`;
+            const dateEnd = `${date}T23:59:59Z`;
+
+            const { data: booked } = await supabase
+              .from("appointments")
+              .select("start_at, end_at")
+              .eq("status", "booked")
+              .gte("start_at", dateStart)
+              .lte("start_at", dateEnd);
+
+            const { data: blocked } = await supabase
+              .from("blocked_times")
+              .select("start_at, end_at")
+              .gte("start_at", dateStart)
+              .lte("end_at", dateEnd);
+
+            // Generate slots
+            const slots = [];
+            const baseDate = new Date(`${date}T${start}Z`);
+
+            for (
+              let mins = 0;
+              mins < (endH - startH) * 60 + (endM - startM);
+              mins += slotStep
+            ) {
+              const slotStart = new Date(baseDate.getTime() + mins * 60000);
+              const slotEnd = new Date(slotStart.getTime() + duration * 60000);
+
+              // Check if slot conflicts with booked/blocked
+              const isBlocked =
+                (booked || []).some((b) => {
+                  const bStart = new Date(b.start_at);
+                  const bEnd = new Date(b.end_at);
+                  return slotStart < bEnd && slotEnd > bStart;
+                }) ||
+                (blocked || []).some((b) => {
+                  const bStart = new Date(b.start_at);
+                  const bEnd = new Date(b.end_at);
+                  return slotStart < bEnd && slotEnd > bStart;
+                });
+
+              if (!isBlocked) {
+                slots.push(slotStart.toISOString());
+              }
+            }
+
+            result = {
+              ok: true,
+              available_slots: slots.slice(0, 10),
+              slot_count: slots.length,
+            };
+          }
         }
-
-        result = { ok: true, available_slots: slots, slot_count: slots.length };
       } else if (functionName === "book_appointment") {
         const {
           patient_name,
@@ -485,17 +562,27 @@ async function handleClinicVapiWebhook(req, res) {
           notes,
         } = args;
 
+        // Get service duration to calculate end_at
+        const { data: svc } = await supabase
+          .from("services")
+          .select("duration_minutes")
+          .eq("id", service_id)
+          .single();
+
+        const duration = svc?.duration_minutes || 30;
+        const endTime = new Date(
+          new Date(slot_start_at).getTime() + duration * 60000,
+        ).toISOString();
+
         const { data: appt, error: apptError } = await supabase
-          .from(appointments)
+          .from("appointments")
           .insert([
             {
               patient_name,
               patient_phone,
               service_id,
               start_at: slot_start_at,
-              end_at: new Date(
-                new Date(slot_start_at).getTime() + 30 * 60000,
-              ).toISOString(),
+              end_at: endTime,
               notes,
               source: "vapi",
               status: "booked",
@@ -509,7 +596,7 @@ async function handleClinicVapiWebhook(req, res) {
           : {
               ok: true,
               appointment_id: appt.id,
-              message: `Appointment booked for ${patient_name}`,
+              message: `✅ Appointment confirmed for ${patient_name} on ${new Date(slot_start_at).toLocaleString()}`,
             };
       } else {
         result = { error: `Unknown function: ${functionName}` };
