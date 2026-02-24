@@ -13,17 +13,45 @@ async function menuSearch(query, restaurantId) {
   const { ok, supabase, error } = getSupabase();
   if (!ok) return { ok: false, error };
 
+  const q = (query || "").trim().toLowerCase();
+
+  // Check if this is a clinic service query
+  if (restaurantId === "clinic_services" || q.includes("dental") || q.includes("clinic")) {
+    const { services } = getTableNames();
+
+    let dbQuery = supabase
+      .from(services)
+      .select("id, name, duration_minutes, price, currency")
+      .eq("is_active", true);
+
+    if (q) {
+      dbQuery = dbQuery.ilike("name", `%${q}%`);
+    }
+
+    const { data, error: servicesError } = await dbQuery;
+    if (servicesError) {
+      return { ok: false, error: servicesError.message || servicesError };
+    }
+
+    return {
+      ok: true,
+      results: (data || []).map(s => ({
+        name: s.name,
+        duration: `${s.duration_minutes} min`,
+        price: `${s.price} ${s.currency}`,
+        id: s.id
+      }))
+    };
+  }
+
+  // Otherwise search restaurant menu
   const { menu } = getTableNames();
-  const q = (query || "").trim();
 
   let dbQuery = supabase
     .from(menu)
     .select("name, description, price, currency")
     .eq("is_available", true);
   dbQuery = dbQuery.eq("restaurant_id", "d86309d6-3a97-45ad-a5bd-3a7ff2a08f6d");
-  //   if (restaurantId) {
-  //     dbQuery = dbQuery.eq("restaurant_id", restaurantId);
-  //   }
 
   if (q) {
     dbQuery = dbQuery.ilike("name", `%${q}%`);
