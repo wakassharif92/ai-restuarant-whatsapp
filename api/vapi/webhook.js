@@ -18,13 +18,12 @@ async function menuSearch(query, restaurantId) {
   // Check if this is a clinic service query
   if (
     restaurantId === "clinic_services" ||
+    restaurantId === "wellness_clinic" ||
     q.includes("dental") ||
     q.includes("clinic")
   ) {
-    const { services } = getTableNames();
-
     let dbQuery = supabase
-      .from(services)
+      .from("services")
       .select("id, name, duration_minutes, price, currency")
       .eq("is_active", true);
 
