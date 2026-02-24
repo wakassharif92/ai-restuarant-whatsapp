@@ -16,6 +16,10 @@
     {
       "source": "/api/health",
       "destination": "/api/restaurant?section=health"
+    },
+    {
+      "source": "/api/clinic/:path*",
+      "destination": "/api/clinic?path=:path*"
     }
   ]
 }

@@ -10,13 +10,8 @@ app.use("/admin", express.static(path.join(__dirname, "admin")));
 const restaurantHandler = require("./api/restaurant");
 const vapiWebhook = require("./api/vapi/webhook");
 
-// Clinic endpoints
-const clinicLogin = require("./api/clinic/login");
-const clinicAppointments = require("./api/clinic/appointments");
-const clinicServices = require("./api/clinic/services");
-const clinicBlockedTimes = require("./api/clinic/blocked-times");
-const clinicSettings = require("./api/clinic/settings");
-const clinicVapiWebhook = require("./api/clinic/vapi-webhook");
+// Clinic endpoints (consolidated)
+const clinicHandler = require("./api/clinic");
 
 // Restaurant routes (consolidated)
 app.all("/api/admin/:path", (req, res) => {
@@ -38,15 +33,11 @@ app.all("/api/health", (req, res) => {
 });
 app.post("/api/vapi/webhook", (req, res) => vapiWebhook(req, res));
 
-// Clinic routes
-app.post("/api/clinic/login", (req, res) => clinicLogin(req, res));
-app.all("/api/clinic/appointments", (req, res) => clinicAppointments(req, res));
-app.all("/api/clinic/services", (req, res) => clinicServices(req, res));
-app.all("/api/clinic/blocked-times", (req, res) =>
-  clinicBlockedTimes(req, res),
-);
-app.all("/api/clinic/settings", (req, res) => clinicSettings(req, res));
-app.all("/api/clinic/vapi-webhook", (req, res) => clinicVapiWebhook(req, res));
+// Clinic routes (consolidated)
+app.all("/api/clinic/:path", (req, res) => {
+  req.query.path = req.params.path;
+  return clinicHandler(req, res);
+});
 
 // Root endpoint
 app.get("/", (req, res) => {
