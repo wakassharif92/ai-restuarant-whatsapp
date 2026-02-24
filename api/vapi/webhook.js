@@ -16,7 +16,11 @@ async function menuSearch(query, restaurantId) {
   const q = (query || "").trim().toLowerCase();
 
   // Check if this is a clinic service query
-  if (restaurantId === "clinic_services" || q.includes("dental") || q.includes("clinic")) {
+  if (
+    restaurantId === "clinic_services" ||
+    q.includes("dental") ||
+    q.includes("clinic")
+  ) {
     const { services } = getTableNames();
 
     let dbQuery = supabase
@@ -35,12 +39,12 @@ async function menuSearch(query, restaurantId) {
 
     return {
       ok: true,
-      results: (data || []).map(s => ({
+      results: (data || []).map((s) => ({
         name: s.name,
         duration: `${s.duration_minutes} min`,
         price: `${s.price} ${s.currency}`,
-        id: s.id
-      }))
+        id: s.id,
+      })),
     };
   }
 
