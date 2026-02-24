@@ -1,3 +1,21 @@
 {
-  "version": 2
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/api/admin/:path*",
+      "destination": "/api/restaurant?section=admin&path=:path*"
+    },
+    {
+      "source": "/api/order",
+      "destination": "/api/restaurant?section=order"
+    },
+    {
+      "source": "/api/webhook",
+      "destination": "/api/restaurant?section=webhook"
+    },
+    {
+      "source": "/api/health",
+      "destination": "/api/restaurant?section=health"
+    }
+  ]
 }
