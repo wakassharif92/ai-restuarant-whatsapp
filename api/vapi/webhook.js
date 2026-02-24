@@ -219,6 +219,33 @@ module.exports = async (req, res) => {
       });
     }
 
+    const clinicToolNames = new Set(["check_availability", "book_appointment"]);
+    const hasClinicTool = message.toolCalls.some((toolCall) =>
+      clinicToolNames.has(toolCall?.function?.name),
+    );
+
+    if (hasClinicTool) {
+      const protocol =
+        req.headers["x-forwarded-proto"] ||
+        (req.connection && req.connection.encrypted ? "https" : "http");
+      const host = req.headers["x-forwarded-host"] || req.headers.host;
+      const url = `${protocol}://${host}/api/clinic/vapi-webhook`;
+
+      const clinicResp = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(req.headers.authorization
+            ? { Authorization: req.headers.authorization }
+            : {}),
+        },
+        body: JSON.stringify(req.body),
+      });
+
+      const clinicJson = await clinicResp.json();
+      return res.status(clinicResp.status).json(clinicJson);
+    }
+
     const results = [];
 
     for (const toolCall of message.toolCalls) {
